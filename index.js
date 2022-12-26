@@ -118,7 +118,7 @@ run().catch(err => console.error(err))
 //sign JWT token
 app.post('/jwt', (req, res) => {
   const user = req.body;
-  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });  // (when jwt will expires)
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d' });  // (when jwt will expires)
   res.send({token})
 })
 
