@@ -55,11 +55,11 @@ async function run() {
 
     // get specific user order data by email query and execute verifyJWT function
     app.get('/orders', verifyJWT, async (req, res) => {
-
       // get decoded from req
       const decoded = req.decoded;
+      // compare requested user and authorized user
       if (decoded?.email !== req.query.email) {
-        res.status(403).send({message: 'Unauthorized access!'})
+       return res.status(403).send({message: 'Unauthorized access!'})
       }
 
       let query = {};
@@ -75,7 +75,7 @@ async function run() {
 
 
     // post order data to database 
-    app.post('/orders', async (req, res) => {
+    app.post('/orders', verifyJWT, async (req, res) => {
       const order = req.body
       const result = await orderCollection.insertOne(order)
       console.log(result)
@@ -84,7 +84,7 @@ async function run() {
 
 
     // update a specific order status 
-    app.patch('/orders/:id', async(req, res) => {
+    app.patch('/orders/:id', verifyJWT, async(req, res) => {
       const id = req.params.id;
       const filter= { _id: ObjectId(id) }
       const status = req.body.status;
@@ -98,7 +98,7 @@ async function run() {
     })
 
     // delete an  order
-    app.delete('/orders/:id', async (req, res) => {
+    app.delete('/orders/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = {_id:ObjectId(id)}
       const result = await orderCollection.deleteOne(query);
@@ -114,27 +114,6 @@ async function run() {
 run().catch(err => console.error(err))
 
 
-// verify JWT token 
-function verifyJWT(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    res.status(401).send({ message: "Unauthorized request!" });
-  }
-
-  // get the token: we send token as `Bearer token` then we split it with empty space get back an array.
-  const token = authHeader.split(" ")[1];
-
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
-    if (err) {
-     return res.status(401).send({ message: "Unauthorized Access!" });
-    }
-    req.decoded = decoded;
-
-    // must call the next(), otherwise function will not go further
-    next();
-  });
-}
-
 
 //sign JWT token
 app.post('/jwt', (req, res) => {
@@ -144,6 +123,28 @@ app.post('/jwt', (req, res) => {
 })
 
 
+
+// verify JWT token middleware 
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return  res.status(401).send({ message: "Unauthorized request!" });
+  }
+
+  // get the token: we send token as `Bearer token` then we split it with empty space get back an array.
+  const token = authHeader.split(" ")[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+     return res.status(403).send({ message: "Forbidden Access!" });
+    }
+
+    req.decoded = decoded;
+
+    // must call the next(), otherwise function will not go further
+    next();
+  });
+}
 
 
 app.listen(port, (req, res) => {
